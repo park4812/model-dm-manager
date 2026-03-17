@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모델 DM 관리 - 2026.03</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 16px; }
+
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 4px; color: #fff; }
+  .subtitle { text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 20px; }
+
+  /* 통계 */
+  .stats { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+  .stat { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px 16px; text-align: center; min-width: 80px; }
+  .stat-num { font-size: 1.4rem; font-weight: 800; color: #8b5cf6; }
+  .stat-label { font-size: 0.7rem; color: #888; margin-top: 2px; }
+
+  /* 소스 필터 */
+  .source-filter { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .source-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #333; background: #1a1a1a; color: #aaa; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .source-btn.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+  .source-btn:hover { border-color: #6366f1; }
+
+  /* 상태 탭 */
+  .status-tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .status-tab { padding: 8px 18px; border-radius: 8px; border: 2px solid transparent; background: #1a1a1a; color: #aaa; cursor: pointer; font-size: 0.85rem; font-weight: 700; transition: all 0.2s; position: relative; }
+  .status-tab .count { font-size: 0.65rem; background: #333; color: #999; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+  .status-tab:hover { background: #222; }
+  .status-tab[data-status="all"].active { border-color: #8b5cf6; color: #fff; background: #1a1a2e; }
+  .status-tab[data-status="all"].active .count { background: #8b5cf6; color: #fff; }
+  .status-tab[data-status="candidate1"].active { border-color: #6366f1; color: #a78bfa; background: #1a1a3e; }
+  .status-tab[data-status="candidate1"].active .count { background: #6366f1; color: #fff; }
+  .status-tab[data-status="candidate2"].active { border-color: #3b82f6; color: #60a5fa; background: #0f1b2d; }
+  .status-tab[data-status="candidate2"].active .count { background: #3b82f6; color: #fff; }
+  .status-tab[data-status="candidate3"].active { border-color: #64748b; color: #94a3b8; background: #0f172a; }
+  .status-tab[data-status="candidate3"].active .count { background: #64748b; color: #fff; }
+  .status-tab[data-status="contacting"].active { border-color: #f59e0b; color: #fbbf24; background: #1c1508; }
+  .status-tab[data-status="contacting"].active .count { background: #f59e0b; color: #000; }
+  .status-tab[data-status="selected"].active { border-color: #10b981; color: #34d399; background: #071f17; }
+  .status-tab[data-status="selected"].active .count { background: #10b981; color: #fff; }
+  .status-tab[data-status="rejected"].active { border-color: #ef4444; color: #f87171; background: #1f0a0a; }
+  .status-tab[data-status="rejected"].active .count { background: #ef4444; color: #fff; }
+
+  /* 검색 */
+  .search-box { display: flex; justify-content: center; margin-bottom: 16px; }
+  .search-box input { width: 100%; max-width: 400px; padding: 8px 14px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.85rem; outline: none; }
+  .search-box input:focus { border-color: #6366f1; }
+
+  /* 카드 */
+  .cards { display: grid; gap: 10px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; display: flex; gap: 12px; transition: all 0.2s; }
+  .card:hover { border-color: #444; }
+  .card.status-candidate1 { border-left: 3px solid #6366f1; }
+  .card.status-candidate2 { border-left: 3px solid #3b82f6; }
+  .card.status-candidate3 { border-left: 3px solid #64748b; }
+  .card.status-contacting { border-left: 3px solid #f59e0b; }
+  .card.status-selected { border-left: 3px solid #10b981; }
+  .card.status-rejected { border-left: 3px solid #ef4444; opacity: 0.5; }
+  .card.hidden { display: none; }
+
+  .card-left { flex-shrink: 0; text-align: center; width: 80px; }
+  .avatar { width: 56px; height: 56px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin: 0 auto 4px; overflow: hidden; }
+  .platform-badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; display: inline-block; margin-top: 2px; }
+  .badge-ig { background: linear-gradient(45deg, #f09433, #dc2743); color: #fff; }
+  .badge-threads { background: #333; color: #fff; }
+  .follower-count { font-size: 0.6rem; color: #666; margin-top: 2px; }
+
+  .card-right { flex: 1; min-width: 0; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+  .card-name { font-size: 0.95rem; font-weight: 700; color: #fff; }
+  .card-handle { font-size: 0.75rem; color: #888; margin-bottom: 6px; }
+  .card-handle a { color: #8b5cf6; text-decoration: none; }
+  .card-handle a:hover { text-decoration: underline; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .tag { font-size: 0.65rem; padding: 2px 7px; border-radius: 12px; font-weight: 600; }
+  .tag-concept { background: #1e3a5f; color: #60a5fa; }
+  .tag-location { background: #1a3329; color: #4ade80; }
+  .tag-date { background: #3b1f2b; color: #f472b6; }
+  .tag-paid { background: #3d2b00; color: #fbbf24; }
+  .tag-type { background: #1f2937; color: #9ca3af; }
+  .tag-gender-m { background: #1e3a5f; color: #93c5fd; }
+
+  .card-msg { font-size: 0.8rem; color: #999; line-height: 1.4; margin-bottom: 8px; }
+
+  .specs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .spec-item { font-size: 0.65rem; color: #777; background: #111; padding: 2px 6px; border-radius: 4px; }
+  .spec-item strong { color: #bbb; }
+
+  /* 컨트롤 영역 */
+  .card-controls { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; padding-top: 8px; border-top: 1px solid #222; }
+  .status-select { padding: 4px 8px; border-radius: 6px; border: 1px solid #333; background: #111; color: #ccc; font-size: 0.75rem; cursor: pointer; outline: none; }
+  .status-select:focus { border-color: #6366f1; }
+  .date-input { padding: 4px 8px; border-radius: 6px; border: 1px solid #333; background: #111; color: #ccc; font-size: 0.75rem; cursor: pointer; outline: none; width: 140px; }
+  .date-input:focus { border-color: #6366f1; }
+  .time-input { padding: 4px 8px; border-radius: 6px; border: 1px solid #333; background: #111; color: #ccc; font-size: 0.75rem; cursor: pointer; outline: none; width: 95px; }
+  .time-input:focus { border-color: #6366f1; }
+  .note-input { padding: 4px 8px; border-radius: 6px; border: 1px solid #333; background: #111; color: #ccc; font-size: 0.75rem; outline: none; flex: 1; min-width: 120px; }
+  .note-input:focus { border-color: #6366f1; }
+
+  .card-time { font-size: 0.7rem; color: #555; }
+
+  .note-display { background: #111; border-left: 2px solid #6366f1; padding: 4px 8px; margin-top: 4px; border-radius: 0 4px 4px 0; font-size: 0.75rem; color: #aaa; }
+
+  /* 스케줄 요약 */
+  .schedule-summary { background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .schedule-summary h2 { font-size: 1rem; margin-bottom: 10px; color: #a78bfa; }
+  .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .date-slot { background: #16213e; border-radius: 8px; padding: 10px; }
+  .date-slot .date { font-weight: 700; color: #60a5fa; font-size: 0.85rem; margin-bottom: 4px; }
+  .date-slot .names { font-size: 0.75rem; color: #ccc; line-height: 1.5; }
+
+  /* 성별 필터 */
+  .gender-filter { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .gender-btn { padding: 6px 14px; border-radius: 20px; border: 2px solid transparent; background: #1a1a1a; color: #aaa; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .gender-btn:hover { background: #222; }
+  .gender-btn .g-count { font-size: 0.6rem; background: #333; color: #999; padding: 1px 5px; border-radius: 10px; margin-left: 3px; }
+  .gender-btn[data-gender="all"].active { border-color: #8b5cf6; color: #fff; }
+  .gender-btn[data-gender="all"].active .g-count { background: #8b5cf6; color: #fff; }
+  .gender-btn[data-gender="female"].active { border-color: #ec4899; color: #f472b6; }
+  .gender-btn[data-gender="female"].active .g-count { background: #ec4899; color: #fff; }
+  .gender-btn[data-gender="male"].active { border-color: #3b82f6; color: #60a5fa; }
+  .gender-btn[data-gender="male"].active .g-count { background: #3b82f6; color: #fff; }
+  .gender-badge { font-size: 0.55rem; padding: 1px 5px; border-radius: 3px; font-weight: 700; margin-left: 4px; vertical-align: middle; }
+  .gender-badge-female { background: #4a0d2e; color: #f472b6; }
+  .gender-badge-male { background: #1e3a5f; color: #93c5fd; }
+
+  /* 내보내기/저장 버튼 */
+  .export-bar { text-align: center; margin-bottom: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .export-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid #6366f1; background: transparent; color: #8b5cf6; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .export-btn:hover { background: #6366f1; color: #fff; }
+  .save-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid #10b981; background: transparent; color: #34d399; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .save-btn:hover { background: #10b981; color: #fff; }
+  .load-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid #f59e0b; background: transparent; color: #fbbf24; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .load-btn:hover { background: #f59e0b; color: #000; }
+  .file-input-hidden { display: none; }
+
+  .footer { text-align: center; color: #444; font-size: 0.7rem; margin-top: 30px; padding-top: 16px; border-top: 1px solid #1a1a1a; }
+
+  /* 카테고리 필터 */
+  .cat-filter { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .cat-btn { padding: 6px 14px; border-radius: 20px; border: 2px solid transparent; background: #1a1a1a; color: #aaa; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .cat-btn:hover { background: #222; }
+  .cat-btn .cat-count { font-size: 0.6rem; background: #333; color: #999; padding: 1px 5px; border-radius: 10px; margin-left: 3px; }
+  .cat-btn[data-cat="all"].active { border-color: #8b5cf6; color: #fff; }
+  .cat-btn[data-cat="all"].active .cat-count { background: #8b5cf6; color: #fff; }
+  .cat-btn[data-cat="shinjuku"].active { border-color: #f59e0b; color: #fbbf24; }
+  .cat-btn[data-cat="shinjuku"].active .cat-count { background: #f59e0b; color: #000; }
+  .cat-btn[data-cat="kimono"].active { border-color: #ec4899; color: #f472b6; }
+  .cat-btn[data-cat="kimono"].active .cat-count { background: #ec4899; color: #fff; }
+  .cat-btn[data-cat="both"].active { border-color: #8b5cf6; color: #c084fc; }
+  .cat-btn[data-cat="both"].active .cat-count { background: #8b5cf6; color: #fff; }
+  .cat-btn[data-cat="unknown"].active { border-color: #6b7280; color: #9ca3af; }
+  .cat-btn[data-cat="unknown"].active .cat-count { background: #6b7280; color: #fff; }
+  .cat-select { padding: 4px 8px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #ccc; font-size: 0.7rem; cursor: pointer; outline: none; margin-left: 4px; }
+  .cat-select:focus { border-color: #ec4899; }
+  .cat-badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px; }
+  .cat-badge-shinjuku { background: #422006; color: #fbbf24; }
+  .cat-badge-kimono { background: #4a0d2e; color: #f472b6; }
+  .cat-badge-both { background: #2e1065; color: #c084fc; }
+  .cat-badge-unknown { background: #1f2937; color: #9ca3af; }
+
+  /* Admin 로그인 */
+  .admin-bar { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .admin-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid #6366f1; background: transparent; color: #8b5cf6; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .admin-btn:hover { background: #6366f1; color: #fff; }
+  .admin-btn.logged-in { background: #10b981; border-color: #10b981; color: #fff; }
+  .admin-status { font-size: 0.75rem; color: #666; }
+  .admin-status.on { color: #34d399; }
+
+  /* 비로그인 시 수정 컨트롤 숨기기 */
+  body.viewer-mode .card-controls { display: none; }
+  body.viewer-mode .export-bar .save-btn,
+  body.viewer-mode .export-bar .load-btn,
+  body.viewer-mode .export-bar .file-input-hidden { display: none; }
+
+  @media (max-width: 600px) {
+    .card { flex-direction: column; }
+    .card-left { width: 100%; display: flex; align-items: center; gap: 10px; }
+    .card-controls { flex-direction: column; align-items: stretch; }
+    .schedule-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="admin-bar">
+  <button class="admin-btn" id="adminBtn" onclick="toggleAdmin()">🔒 관리자 로그인</button>
+  <span class="admin-status" id="adminStatus">보기 전용 모드</span>
+</div>
+
+<h1>모델 DM 관리</h1>
+<p class="subtitle">walk.and.look | 2026년 3월 촬영 모델 모집</p>
+
+<div class="stats" id="statsBar"></div>
+
+<div class="source-filter" id="sourceFilter">
+  <button class="source-btn active" data-source="all">전체</button>
+  <button class="source-btn" data-source="instagram">Instagram</button>
+  <button class="source-btn" data-source="threads">Threads</button>
+</div>
+
+<div class="status-tabs" id="statusTabs">
+  <button class="status-tab active" data-status="all">전체 <span class="count" id="count-all">0</span></button>
+  <button class="status-tab" data-status="candidate1">⭐⭐⭐ <span class="count" id="count-candidate1">0</span></button>
+  <button class="status-tab" data-status="candidate2">⭐⭐ <span class="count" id="count-candidate2">0</span></button>
+  <button class="status-tab" data-status="candidate3">⭐ <span class="count" id="count-candidate3">0</span></button>
+  <button class="status-tab" data-status="contacting">컨택중 <span class="count" id="count-contacting">0</span></button>
+  <button class="status-tab" data-status="selected">선정 <span class="count" id="count-selected">0</span></button>
+  <button class="status-tab" data-status="rejected">탈락 <span class="count" id="count-rejected">0</span></button>
+  <button class="status-tab" data-status="none">미분류 <span class="count" id="count-none">0</span></button>
+</div>
+
+<div class="cat-filter" id="catFilter">
+  <button class="cat-btn active" data-cat="all">전체 <span class="cat-count" id="catcount-all">0</span></button>
+  <button class="cat-btn" data-cat="shinjuku">신주쿠 나이트 <span class="cat-count" id="catcount-shinjuku">0</span></button>
+  <button class="cat-btn" data-cat="kimono">기모노/벚꽃 <span class="cat-count" id="catcount-kimono">0</span></button>
+  <button class="cat-btn" data-cat="both">둘 다 <span class="cat-count" id="catcount-both">0</span></button>
+  <button class="cat-btn" data-cat="unknown">미분류 <span class="cat-count" id="catcount-unknown">0</span></button>
+</div>
+
+<div class="gender-filter" id="genderFilter">
+  <button class="gender-btn active" data-gender="all">전체 <span class="g-count" id="gcount-all">0</span></button>
+  <button class="gender-btn" data-gender="female">여성 <span class="g-count" id="gcount-female">0</span></button>
+  <button class="gender-btn" data-gender="male">남성 <span class="g-count" id="gcount-male">0</span></button>
+</div>
+
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="이름, 핸들, 컨셉, 지역 검색...">
+</div>
+
+<div class="export-bar">
+  <button class="export-btn" onclick="exportData()">선정/컨택중 목록 복사</button>
+  <button class="save-btn" onclick="saveState()">💾 백업 (JSON)</button>
+  <button class="load-btn" onclick="document.getElementById('loadFileInput').click()">📂 백업 복원</button>
+  <input type="file" id="loadFileInput" class="file-input-hidden" accept=".json" onchange="loadState(event)">
+</div>
+
+<div class="cards" id="cardsContainer"></div>
+
+<div class="footer">
+  Generated on 2026-03-17 | walk.and.look Model DM Manager<br>
+  Instagram 22명 + Threads 46명 = 총 68명
+</div>
+
+<script>
+const models = [
+  // ===== INSTAGRAM - 나이트 포트레이트/신주쿠 =====
+  { id: 'ig-1', name: 'sumika / 純夏', handle: 'ssssssumika', platform: 'instagram', tab: 'primary',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'},{t:'프리 모델',c:'type'}],
+    specs: [{k:'키',v:'170.5cm'},{k:'B/W/H',v:'78/60/86'},{k:'신발',v:'24.5'},{k:'헤어',v:'흑발'},{k:'눈',v:'갈색'},{k:'생년',v:'2003'}],
+    msg: '신주쿠 나이트 포트레이트 피사체 모델 참가 희망. 컴포지트(포트폴리오) 전송함. 한국어 조금 가능.',
+    time: '03/17 오전 11:50', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-2', name: 'エミ', handle: '_.oxy25gen._', platform: 'instagram', tab: 'primary',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'도내',c:'location'}],
+    msg: 'Threads 모델 모집 글 보고 연락. 인스타 작품이 좋아 함께 작업 희망.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-3', name: '佑津希 / yuzuki', handle: 'yuzuki_todo', platform: 'instagram', tab: 'primary',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'3/22~25',c:'date'}],
+    msg: '22~25일 나이트 포트레이트 모델 모집 글 보고 참가 희망.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-4', name: '星宮れな', handle: 'hoshimiya_rena', platform: 'instagram', tab: 'request',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'},{t:'유료 피사체',c:'paid'}],
+    msg: 'Threads 신주쿠 촬영 모델 글 보고 연락. 조건 확인 완료.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-5', name: 'おざき ゆかり', handle: 'she_s_zakky', platform: 'instagram', tab: 'primary',
+    tags: [{t:'포트레이트',c:'concept'},{t:'신주쿠',c:'location'},{t:'배우',c:'type'}],
+    msg: '도내 배우. 신주쿠 포트레이트 모델에 관심. 상세 정보 문의.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-6', name: 'ひめ / 被写体', handle: 'popop0044', platform: 'instagram', tab: 'primary',
+    tags: [{t:'포트레이트',c:'concept'},{t:'도내',c:'location'},{t:'3/22~23',c:'date'},{t:'피사체 모델',c:'type'}],
+    msg: 'Threads 보고 연락. 도내 모델 활동 중. 22, 23일 비어있음.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== INSTAGRAM - 벚꽃/기모노 =====
+  { id: 'ig-7', name: '内田 彩菜', handle: 'uchidaayana', platform: 'instagram', tab: 'primary',
+    tags: [{t:'기모노 + 벚꽃',c:'concept'}],
+    msg: '기모노와 벚꽃 모델 안건을 보고 이미지가 맞으면 부탁. 인증 계정.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '', verified: true },
+  { id: 'ig-8', name: 'リコピン', handle: '175cm_26cm', platform: 'instagram', tab: 'primary',
+    tags: [{t:'벚꽃 + 기모노',c:'concept'},{t:'도쿄/사이타마',c:'location'},{t:'3/23 종일, 3/26 10~17시',c:'date'},{t:'의상비/촬영료 상담',c:'paid'}],
+    msg: '벚꽃+기모노 포트레이트 thread 글 보고 연락. 한국어 불가.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-9', name: '愛莉', handle: '_airisu.77', platform: 'instagram', tab: 'primary',
+    tags: [{t:'벚꽃 촬영',c:'concept'},{t:'도쿄',c:'location'},{t:'3/26 하루',c:'date'}],
+    msg: '쓰레드에서 벚꽃 촬영 글 보고 연락.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-10', name: 'kumo', handle: 'i_am._.kumo', platform: 'instagram', tab: 'primary',
+    tags: [{t:'벚꽃',c:'concept'},{t:'도쿄 (쇼와기념공원 등)',c:'location'},{t:'의상비/촬영료 상담',c:'paid'},{t:'흑발 숏컷',c:'type'}],
+    msg: '벚꽃 추천 장소 제안. 의상비/촬영료 상담 희망.',
+    time: '03/15', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-11', name: 'かれん', handle: 'fortuna._karen', platform: 'instagram', tab: 'request',
+    tags: [{t:'벚꽃 + 기모노',c:'concept'},{t:'도쿄',c:'location'},{t:'3/22 또는 3/23 종일',c:'date'}],
+    msg: 'Threads 보고 연락. 벚꽃과 기모노 대호평. 3/22 또는 3/23 종일 가능.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-12', name: 'keito', handle: 'bagel_pan_o', platform: 'instagram', tab: 'primary',
+    tags: [{t:'기모노',c:'concept'},{t:'오사카',c:'location'}],
+    msg: '오사카 모델. 기모노 사진 포트폴리오 첨부. 오사카 소재 (도쿄 이동 필요).',
+    time: '03/15', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-13', name: 'Yu_mi♡pink', handle: 'yu_mi.pink', platform: 'instagram', tab: 'request',
+    tags: [{t:'기모노',c:'concept'}],
+    msg: '기모노 촬영 희망.',
+    time: '03/15', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== INSTAGRAM - 일반/기타 =====
+  { id: 'ig-14', name: '51_nkw_20', handle: '51_nkw_20', platform: 'instagram', tab: 'primary',
+    tags: [{t:'웨딩 포토',c:'concept'},{t:'초보자',c:'type'}],
+    msg: '웨딩 포토 촬영 문의. 초보자이지만 빈 일정 있으면 알려달라.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-15', name: 'RKC / 山田 梨香子', handle: 'rkc._.0606', platform: 'instagram', tab: 'primary',
+    tags: [{t:'프리 모델',c:'type'}],
+    msg: '프리 모델 소개. (메시지 일부 삭제/숨김)',
+    time: '03/15', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-16', name: '嶺石夢翔 / Yuto', handle: 'dreamshos', platform: 'instagram', tab: 'request',
+    tags: [{t:'일반 촬영',c:'concept'}],
+    msg: 'Threads 보고 관심. 참가 희망.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-17', name: '夢翔', handle: 'dreamsubs_', platform: 'instagram', tab: 'request',
+    tags: [{t:'일반 촬영',c:'concept'}],
+    msg: 'Threads 보고 관심. 참가 희망.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-18', name: 'Cassie', handle: 'cassie9.5_', platform: 'instagram', tab: 'request',
+    tags: [{t:'일반 촬영',c:'concept'},{t:'도쿄',c:'location'},{t:'3/20~22',c:'date'}],
+    msg: '3/20~22일 도쿄 촬영 가능. 프로필 사진 참고 요청.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-19', name: '猫黒すい', handle: 'suui_nekuro', platform: 'instagram', tab: 'request',
+    tags: [{t:'일반 촬영',c:'concept'},{t:'3/24~25',c:'date'}],
+    msg: '쓰레드 글 보고 연락. 24, 25일 가능.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-20', name: '石川明香里 / Akari', handle: '2021rinrin_aka', platform: 'instagram', tab: 'request',
+    tags: [{t:'모델 촬영',c:'concept'}],
+    msg: '쓰레드 모델 모집 글 보고 연락. 모델 사진은 인스타에 게시 중.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-21', name: 'Keina', handle: 'kei_popo', platform: 'instagram', tab: 'request',
+    tags: [{t:'내용 확인 불가',c:'type'}],
+    msg: 'Threads 링크 공유했으나 메시지 내용 삭제됨.',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-22', name: 'はるか', handle: 'haru_chama___', platform: 'instagram', tab: 'request',
+    tags: [{t:'내용 확인 불가',c:'type'}],
+    msg: 'Threads 링크 공유했으나 메시지 내용 삭제됨.',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== THREADS - 메시지 요청 (미수락) =====
+  { id: 'th-1', name: 'aiko', handle: 'o44os_', platform: 'threads', tab: 'request',
+    tags: [{t:'모델',c:'concept'}],
+    msg: 'お世話になります！モデルの件で連絡しました (모델 건으로 연락)',
+    time: '03/16 20:52', followers: 17, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-2', name: '中田俊輔', handle: 'shunsuke_0531', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영 모델',c:'concept'},{t:'남성',c:'gender-m'}],
+    msg: 'モデルをしている中田俊輔と申します！撮影モデルぜひやりたいです (남성 모델, 촬영 희망)',
+    time: '03/16 20:49', followers: 182, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-3', name: '橋本英憲 / HIDENORI', handle: 'hide2_004', platform: 'threads', tab: 'request',
+    tags: [{t:'포트레이트',c:'concept'},{t:'남성',c:'gender-m'}],
+    msg: 'ポートレート撮影の件でご連絡させて頂きました (포트레이트 촬영 건으로 연락)',
+    time: '03/16 20:05', followers: 319, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-4', name: 'うさぎ', handle: 'eee45e', platform: 'threads', tab: 'request',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: '新宿ナイトポートレートの募集見てメッセージ (신주쿠 나이트 포트레이트 모집 보고 연락)',
+    time: '03/16 20:01', followers: 227, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-5', name: '近藤綾乃', handle: 'kondo.ayano_official', platform: 'threads', tab: 'request',
+    tags: [{t:'포트레이트',c:'concept'}],
+    msg: 'ポートレートの投稿を見てご連絡致しました (포트레이트 게시물 보고 연락)',
+    time: '03/16 20:00', followers: 271, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-6', name: '唯 / WaVE(avex×LIVESTAR)', handle: 'mayu_uz', platform: 'threads', tab: 'request',
+    tags: [{t:'모델',c:'concept'},{t:'3/23 18:30',c:'date'}],
+    msg: 'モデル希望します 23日18時半いかがですか？ (모델 희망, 23일 18시반 제안)',
+    time: '03/16 19:33', followers: 144, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-7', name: 'nacamn', handle: 'nacamn777_', platform: 'threads', tab: 'request',
+    tags: [{t:'관심',c:'concept'}],
+    msg: 'はじめまして 気になります (관심있습니다)',
+    time: '03/16 19:16', followers: 195, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-8', name: 'SeiRA Okumoto / 奥本星来', handle: 'star_seira', platform: 'threads', tab: 'request',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: 'はじめましてセーラです 新宿ナイトポートレート興味あります (신주쿠 나이트 포트레이트 관심)',
+    time: '03/16 19:15', followers: 217, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-9', name: '彩夏 ayaka', handle: 'aya.p_q.gram', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: '投稿拝見させていただきました！新宿で撮影していただきたいです (게시물 보고 신주쿠 촬영 희망)',
+    time: '03/16 19:13', followers: 139, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== THREADS - 수락된 대화 =====
+  { id: 'th-10', name: 'Hisui', handle: 'hisui_log_', platform: 'threads', tab: 'primary',
+    tags: [{t:'포트레이트',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: '新宿でのポートレート、是非モデルさせていただきたいです (신주쿠 포트레이트 모델 희망)',
+    time: '03/16 23:43', followers: 710, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-11', name: 'DAIKI', handle: 'daikisennbokuya1231', platform: 'threads', tab: 'primary',
+    tags: [{t:'포트레이트',c:'concept'},{t:'남성',c:'gender-m'}],
+    msg: 'ポートレートよ件見てご連絡させて頂きました (포트레이트 건으로 연락)',
+    time: '03/16 23:23', followers: 89, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-12', name: '今村 環', handle: 'wolf_chan17', platform: 'threads', tab: 'primary',
+    tags: [{t:'포트레이트',c:'concept'},{t:'3/22~25',c:'date'}],
+    msg: '3/22-25のポートレートに興味があります (3/22-25 포트레이트 관심)',
+    time: '03/16 23:20', followers: 447, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-13', name: 'Null', handle: 'null_sub666', platform: 'threads', tab: 'primary',
+    tags: [{t:'촬영',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: '新宿での撮影に興味ありDMさせて頂きました (신주쿠 촬영에 관심)',
+    time: '03/16 18:25', followers: 5, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-14', name: 'みちゃん', handle: 'michan3233', platform: 'threads', tab: 'primary',
+    tags: [{t:'벚꽃',c:'concept'},{t:'효고/오사카/교토',c:'location'},{t:'3/22 또는 3/24',c:'date'}],
+    msg: '3月22日か24日 桜の撮影お願いします。兵庫か大阪か京都でしたら行けます (3/22 또는 24, 벚꽃, 효고/오사카/교토 가능)',
+    time: '03/16 17:50', followers: 90, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-15', name: '亀谷しおん', handle: 'shionn_1120', platform: 'threads', tab: 'primary',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: '亀谷しおんと申します。新宿でのナイトポートレート撮影にとても興味があります (카메타니 시온, 신주쿠 나이트 포트레이트 관심)',
+    time: '03/16 17:41', followers: 217, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-16', name: 'monika', handle: 'monica20091110', platform: 'threads', tab: 'primary',
+    tags: [{t:'촬영',c:'concept'},{t:'3/24 또는 3/25',c:'date'}],
+    msg: '初めまして 24日か25日お願いしたいです！ (24일 또는 25일 희망)',
+    time: '03/16 17:39', followers: 895, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-17', name: 'Hikaru Miyasato', handle: 'mth_1105', platform: 'threads', tab: 'primary',
+    tags: [{t:'모델 촬영',c:'concept'}],
+    msg: 'モデル撮影に興味がありご連絡しました (모델 촬영에 관심)',
+    time: '03/16 17:34', followers: 394, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-18', name: 'せりな', handle: 'serina.x.eve09', platform: 'threads', tab: 'primary',
+    tags: [{t:'벚꽃 기모노',c:'concept'},{t:'신주쿠',c:'location'},{t:'3/23, 3/25',c:'date'}],
+    msg: '3月23日、25日でしたら桜着物撮影新宿撮影可能です！ (3/23, 25일 벚꽃 기모노/신주쿠 촬영 가능)',
+    time: '03/16 17:33', followers: 184, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-19', name: 'かのん / non non', handle: '147_ncha', platform: 'threads', tab: 'primary',
+    tags: [{t:'모델',c:'concept'},{t:'센다이/도쿄',c:'location'},{t:'24·25일 제외 가능',c:'date'}],
+    msg: '仙台.東京を拠点にモデル活動。24.25日以外ならいつでも大丈夫。場所は東京希望 (센다이/도쿄 모델, 24·25일 제외 언제든 OK, 도쿄 희망)',
+    time: '03/16 16:24', followers: 324, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-20', name: 'saori', handle: 'sao.rin_', platform: 'threads', tab: 'primary',
+    tags: [{t:'기모노',c:'concept'},{t:'오사카/교토',c:'location'},{t:'상호무상 OK',c:'paid'}],
+    msg: '大阪、京都で着物撮影可能です。相互無償で大丈夫 (오사카/교토 기모노 촬영 가능, 상호무상 OK)',
+    time: '03/16 16:00', followers: 98, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== THREADS - 2차 =====
+  { id: 'th-21', name: '謝佳錡 Gigi', handle: 'gigi_hsieh_2006', platform: 'threads', tab: 'primary',
+    tags: [{t:'관심',c:'concept'},{t:'교토',c:'location'}],
+    msg: '興味がある / 京都でいいですか (관심있음, 교토에서 가능한지 질문)',
+    time: '03/16 15:28', followers: 10000, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-22', name: 'かなび', handle: 'risa_s2___', platform: 'threads', tab: 'primary',
+    tags: [{t:'촬영회',c:'concept'},{t:'오사카',c:'location'}],
+    msg: '大阪でしたら撮影会に参加させていただきたいです (오사카 촬영회 참가 희망)',
+    time: '03/16 15:16', followers: 50, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-23', name: '福本 asamin', handle: 'zhaomeifuben', platform: 'threads', tab: 'primary',
+    tags: [{t:'기모노 + 벚꽃',c:'concept'},{t:'가고시마',c:'location'},{t:'3/20~29',c:'date'},{t:'한국어/영어 가능',c:'type'}],
+    msg: '日本の鹿児島に住んでいます。着物&桜のポートレート撮影希望。3月20日から29日の間で大丈夫 (가고시마 거주, 기모노+벚꽃 포트레이트 희망, 3/20-29 가능, 한국어/영어 가능)',
+    time: '03/16 15:15', followers: 45, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-24', name: '桜木なぎ', handle: 'kyoto_nagi', platform: 'threads', tab: 'primary',
+    tags: [{t:'기모노 + 벚꽃',c:'concept'},{t:'교토',c:'location'},{t:'3/27(금) 11~16시, 3/28(토) 11~21시',c:'date'},{t:'기모노+헤어 1만엔, 1h무료/2h 5천엔/3h 1만엔',c:'paid'}],
+    msg: '京都で着物と桜の撮影。3/27(金)11~16時, 28(土)11~21時可能。着物+ヘアセット1万円, 交通費別 (교토 기모노+벚꽃, 요금제 있음)',
+    time: '03/16 15:02', followers: 522, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-25', name: '山岸紡 / tsumu', handle: '5656222a', platform: 'threads', tab: 'primary',
+    tags: [{t:'촬영',c:'concept'}],
+    msg: '山岸積むと申します。興味あります。インスタのカメラを持った作風がポスターのようで素敵 (야마기시 츠무, 작풍 칭찬, 관심)',
+    time: '03/16 15:00', followers: 124, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-26', name: 'ANNA', handle: 'an__na12.24', platform: 'threads', tab: 'primary',
+    tags: [{t:'모델',c:'concept'}],
+    msg: 'モデルに興味あります。詳しい詳細聞きたいです (모델 관심, 상세 정보 문의)',
+    time: '03/16 14:49', followers: 123, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-27', name: 'CHAERIN', handle: '_chae.kku_', platform: 'threads', tab: 'primary',
+    tags: [{t:'촬영',c:'concept'},{t:'후쿠오카',c:'location'}],
+    msg: 'こちらの投稿を見てご連絡させていただきました！福岡在住です (게시물 보고 연락, 후쿠오카 거주)',
+    time: '03/16 14:33', followers: 546, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-28', name: 'Abi / アビ', handle: 'abii.girll', platform: 'threads', tab: 'primary',
+    tags: [{t:'프리 모델',c:'type'},{t:'도쿄',c:'location'}],
+    specs: [{k:'키',v:'158cm'},{k:'B/W/H',v:'91/64/86'},{k:'신발',v:'24.5'}],
+    msg: "I'm Abi, a freelance model & creative based in Tokyo. 포트폴리오: ambport.cargo.site/modelingport_abi",
+    time: '03/16 13:45', followers: 453, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== THREADS - 3차 =====
+  { id: 'th-29', name: '丸井みのり', handle: 'minorin_1112', platform: 'threads', tab: 'request',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'},{t:'3/22(일) 19:00~21:00',c:'date'},{t:'프리 모델',c:'type'}],
+    msg: 'フリーランスモデルとして都内で活動。3/22(日)19:00~21:00の新宿ポートレートモデル希望。Instagram: minorin_1112 (프리랜스 모델, 도내 활동, 3/22 19~21시 신주쿠 포트레이트 희망)',
+    time: '03/17 08:26', followers: 587, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-30', name: 'Aamir Bartaula', handle: 'aamir_bartaula', platform: 'threads', tab: 'request',
+    tags: [{t:'모델',c:'concept'},{t:'남성',c:'gender-m'}],
+    msg: '投稿見てDMしました。モデルのアミルです (게시물 보고 DM, 모델 아밀)',
+    time: '03/17 11:19', followers: 129, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-31', name: 'Kosei / こうせい', handle: 'ksi_1.19', platform: 'threads', tab: 'request',
+    tags: [{t:'피사체',c:'concept'},{t:'남성',c:'gender-m'}],
+    msg: 'こうせいと申します！被写体の件で詳細気になりdmしました！ (코세이, 피사체 건으로 상세 문의)',
+    time: '03/17 09:32', followers: 70, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-32', name: 'atsuco_chan', handle: 'atsuco_chan', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영 모델',c:'concept'}],
+    msg: '撮影モデル対応可能です！Instagram: 0823_0923 (촬영 모델 대응 가능, IG: 0823_0923)',
+    time: '03/17 09:32', followers: 181, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-33', name: 'AYAKA', handle: 'chamaru._.91', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영',c:'concept'}],
+    msg: 'イメージがあいましたらよろしくお願いいたします (이미지 맞으면 부탁)',
+    time: '03/17 08:45', followers: 353, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-34', name: 'yuya', handle: 'us12678', platform: 'threads', tab: 'request',
+    tags: [{t:'기모노',c:'concept'},{t:'간사이',c:'location'},{t:'한국어 가능',c:'type'}],
+    msg: '한국과 기모노를 좋아하는 유야입니다. 기모노 촬영 모델에 관심. 간사이에서 기모노 렌탈 촬영 가능하다면 참여 희망. (한국어로 메시지)',
+    time: '03/17 06:39', followers: 106, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-35', name: '平野つき', handle: 'hiranoomoon', platform: 'threads', tab: 'request',
+    tags: [{t:'기모노 + 나이트',c:'concept'},{t:'도쿄',c:'location'},{t:'모델/탈렌트',c:'type'}],
+    msg: '東京でモデル・タレント活動をしている平野つきと申します。着物でも、新宿のナイト撮影でも可能です。Instagramに写真が沢山載っています (도쿄 모델/탈렌트, 기모노도 신주쿠 나이트도 가능)',
+    time: '03/17 03:17', followers: 598, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-36', name: '璃空', handle: 'riiiikuuuu0123', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영',c:'concept'},{t:'남성',c:'gender-m'}],
+    msg: 'イメージに合いましたらよろしくお願いします！ (이미지 맞으면 부탁, 메시지 이용 불가 표시)',
+    time: '03/17 02:20', followers: 180, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-37', name: 'りこ', handle: 'riko_m11k', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영',c:'concept'}],
+    msg: '撮影に興味があり、もしまだ募集されていましたら参加させていただきたいです。雰囲気などはInstagramに写真を投稿しております (촬영 관심, 아직 모집 중이면 참가 희망, IG에 사진)',
+    time: '03/17 01:17', followers: 55, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-38', name: '内山まろん', handle: 'uchiyamamaron', platform: 'threads', tab: 'request',
+    tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'}],
+    msg: '경대님 모집글(3/22~25 신주쿠 나이트 Night City/Cinematic) 공유하며 이미지에 합하면 연락 희망',
+    time: '03/17', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-39', name: 'kyan', handle: 'kyanchangram2727', platform: 'threads', tab: 'request',
+    tags: [{t:'포트레이트',c:'concept'}],
+    msg: 'ポトレ興味あります (포트레이트 관심)',
+    time: '03/17 00:37', followers: 692, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-40', name: '晴香みらい', handle: 'haru_miraiii', platform: 'threads', tab: 'request',
+    tags: [{t:'나이트 포트레이트 + 기모노×벚꽃',c:'concept'},{t:'신주쿠',c:'location'},{t:'3/22, 25일 (23일은 20시~)',c:'date'}],
+    msg: '新宿ナイトポートレート募集 + 着物×桜にも興味。現状22、25日のみ可能 (23日は20時～なら可能)。着物×桜は22～25日だと22、25日のみ。その後の日程も提示可能 (신주쿠 나이트 + 기모노×벚꽃 둘 다 관심, 22/25일 가능, 23일 20시 이후 가능)',
+    time: '03/17 00:23', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-41', name: 'ココミ', handle: 'qikxx_', platform: 'threads', tab: 'request',
+    tags: [{t:'나이트 포트레이트',c:'concept'}],
+    msg: 'ナイトポートレート興味あります！是非モデル協力させて下さい (나이트 포트레이트 관심, 모델 협력 희망)',
+    time: '03/17 00:21', followers: 85, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-42', name: 'sabrinao._.o', handle: 'sabrinao._.o', platform: 'threads', tab: 'request',
+    tags: [{t:'모델',c:'concept'},{t:'교토',c:'location'},{t:'3/25',c:'date'}],
+    msg: '現在京都に住んでいる素人モデルです。3月25日が可能です (교토 거주 소인 모델, 3/25 가능)',
+    time: '03/16 22:57', followers: 0, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-43', name: '石田ある / Ishida Aru', handle: 'aruishida_artbookfashion', platform: 'threads', tab: 'request',
+    tags: [{t:'벚꽃 + 기모노',c:'concept'},{t:'후쿠오카',c:'location'},{t:'모델/아티스트/배우',c:'type'},{t:'한국어 가능',c:'type'}],
+    msg: '후쿠오카에서 모델·아티스트·배우로서 활동 중인 이시다 아루. Threads 모집 투고 보고 관심. 벚꽃과 기모노 촬영 응모 희망. 한국어로도 메시지 (한국어 능통)',
+    time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-44', name: '池原愛', handle: '__ai_ikehara', platform: 'threads', tab: 'request',
+    tags: [{t:'촬영',c:'concept'},{t:'3/22~25',c:'date'}],
+    msg: 'Threadsで3/22~3/25撮影案件についてご連絡。是非ご起用お願いしたいです！ (3/22~25 촬영 안건으로 연락, 기용 부탁)',
+    time: '03/16 21:26', followers: 1076, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-45', name: 'Tantan', handle: 'monn.ran26', platform: 'threads', tab: 'request',
+    tags: [{t:'관심',c:'concept'}],
+    msg: 'こんにちは (인사)',
+    time: '03/16 21:25', followers: 59, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'th-46', name: 'みなみ', handle: '2oo8mt_s1', platform: 'threads', tab: 'request',
+    tags: [{t:'모델',c:'concept'}],
+    msg: 'モデルの件で興味あります！良かったらお話お伺いしたいです！ (모델 건 관심, 이야기 희망)',
+    time: '03/16 21:08', followers: 153, status: 'none', date: '', timeSlot: '', note: '' },
+];
+
+// Auto-categorize models
+function autoCategory(m) {
+  const allText = (m.tags.map(t=>t.t).join(' ') + ' ' + m.msg).toLowerCase();
+  const isShinjuku = /나이트|night|신주쿠|shinjuku|ナイト|新宿/.test(allText);
+  const isKimono = /기모노|벚꽃|kimono|착물|着物|桜|cherry|きもの/.test(allText);
+  if (isShinjuku && isKimono) return 'both';
+  if (isShinjuku) return 'shinjuku';
+  if (isKimono) return 'kimono';
+  return 'unknown';
+}
+
+// Auto-detect gender
+function autoGender(m) {
+  if (m.tags.some(t => t.c === 'gender-m')) return 'male';
+  return 'female';
+}
+
+models.forEach(m => {
+  if (!m.cat) m.cat = autoCategory(m);
+  if (!m.gender) m.gender = autoGender(m);
+});
+
+// State
+let currentSource = 'all';
+let currentStatus = 'all';
+let currentCat = 'all';
+let currentGender = 'all';
+let searchQuery = '';
+
+function getProfileUrl(m) {
+  if (m.platform === 'instagram') return `https://instagram.com/${m.handle}`;
+  return `https://threads.net/@${m.handle}`;
+}
+
+function renderStats() {
+  const ig = models.filter(m => m.platform === 'instagram').length;
+  const th = models.filter(m => m.platform === 'threads').length;
+  const withDate = models.filter(m => m.tags.some(t => t.c === 'date')).length;
+  const selected = models.filter(m => m.status === 'selected').length;
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><div class="stat-num">${models.length}</div><div class="stat-label">총 DM</div></div>
+    <div class="stat"><div class="stat-num">${ig}</div><div class="stat-label">Instagram</div></div>
+    <div class="stat"><div class="stat-num">${th}</div><div class="stat-label">Threads</div></div>
+    <div class="stat"><div class="stat-num">${withDate}</div><div class="stat-label">일정 제시</div></div>
+    <div class="stat"><div class="stat-num">${selected}</div><div class="stat-label">선정</div></div>
+  `;
+}
+
+function renderCounts() {
+  const filtered = models.filter(m => currentSource === 'all' || m.platform === currentSource);
+  document.getElementById('count-all').textContent = filtered.length;
+  ['candidate1','candidate2','candidate3','contacting','selected','rejected','none'].forEach(s => {
+    document.getElementById('count-' + s).textContent = filtered.filter(m => m.status === s).length;
+  });
+  // Category counts
+  document.getElementById('catcount-all').textContent = filtered.length;
+  ['shinjuku','kimono','both','unknown'].forEach(c => {
+    document.getElementById('catcount-' + c).textContent = filtered.filter(m => m.cat === c).length;
+  });
+  // Gender counts
+  document.getElementById('gcount-all').textContent = filtered.length;
+  document.getElementById('gcount-female').textContent = filtered.filter(m => m.gender === 'female').length;
+  document.getElementById('gcount-male').textContent = filtered.filter(m => m.gender === 'male').length;
+}
+
+function renderCards() {
+  const container = document.getElementById('cardsContainer');
+  let html = '';
+  models.forEach((m, idx) => {
+    // Filter
+    const sourceMatch = currentSource === 'all' || m.platform === currentSource;
+    const statusMatch = currentStatus === 'all' || m.status === currentStatus;
+    const catMatch = currentCat === 'all' || m.cat === currentCat;
+    const genderMatch = currentGender === 'all' || m.gender === currentGender;
+    const q = searchQuery.toLowerCase();
+    const searchMatch = !q || m.name.toLowerCase().includes(q) || m.handle.toLowerCase().includes(q) ||
+      m.msg.toLowerCase().includes(q) || m.tags.some(t => t.t.toLowerCase().includes(q));
+    const hidden = !(sourceMatch && statusMatch && catMatch && genderMatch && searchMatch);
+
+    const statusClass = m.status !== 'none' ? `status-${m.status}` : '';
+    const profileUrl = getProfileUrl(m);
+
+    let specsHtml = '';
+    if (m.specs && m.specs.length) {
+      specsHtml = '<div class="specs">' + m.specs.map(s => `<span class="spec-item"><strong>${s.k}:</strong> ${s.v}</span>`).join('') + '</div>';
+    }
+
+    let tagsHtml = m.tags.map(t => {
+      let cls = 'tag-concept';
+      if (t.c === 'location') cls = 'tag-location';
+      else if (t.c === 'date') cls = 'tag-date';
+      else if (t.c === 'paid') cls = 'tag-paid';
+      else if (t.c === 'type') cls = 'tag-type';
+      else if (t.c === 'gender-m') cls = 'tag-gender-m';
+      return `<span class="tag ${cls}">${t.t}</span>`;
+    }).join('');
+
+    const followerText = m.followers !== null ? (m.followers >= 10000 ? (m.followers/10000).toFixed(1) + '만' : m.followers) : '';
+
+    html += `
+    <div class="card ${statusClass} ${hidden ? 'hidden' : ''}" data-idx="${idx}" id="card-${idx}">
+      <div class="card-left">
+        <div class="avatar">${m.platform === 'instagram' ? '📷' : '🧵'}</div>
+        <span class="platform-badge ${m.platform === 'instagram' ? 'badge-ig' : 'badge-threads'}">${m.platform === 'instagram' ? 'IG' : 'Threads'}</span>
+        ${followerText ? `<div class="follower-count">${followerText} followers</div>` : ''}
+      </div>
+      <div class="card-right">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${m.name}${m.verified ? ' <span style="color:#3b82f6;font-size:0.75rem;">✓</span>' : ''}<span class="gender-badge gender-badge-${m.gender}">${m.gender==='male'?'♂ 남성':'♀ 여성'}</span>${m.cat !== 'unknown' ? `<span class="cat-badge cat-badge-${m.cat}">${{shinjuku:'신주쿠',kimono:'기모노',both:'둘다'}[m.cat]}</span>` : '<span class="cat-badge cat-badge-unknown">미분류</span>'}</div>
+            <div class="card-handle"><a href="${profileUrl}" target="_blank">@${m.handle}</a></div>
+          </div>
+          <div class="card-time">${m.time}</div>
+        </div>
+        <div class="tags">${tagsHtml}</div>
+        ${specsHtml}
+        <div class="card-msg">${m.msg}</div>
+        <div class="card-controls">
+          <select class="status-select" onchange="setGender(${idx}, this.value)" title="성별" style="border-color:${m.gender==='male'?'#3b82f6':'#ec4899'};">
+            <option value="female" ${m.gender==='female'?'selected':''}>♀ 여성</option>
+            <option value="male" ${m.gender==='male'?'selected':''}>♂ 남성</option>
+          </select>
+          <select class="cat-select" onchange="setCat(${idx}, this.value)">
+            <option value="shinjuku" ${m.cat==='shinjuku'?'selected':''}>신주쿠</option>
+            <option value="kimono" ${m.cat==='kimono'?'selected':''}>기모노</option>
+            <option value="both" ${m.cat==='both'?'selected':''}>둘 다</option>
+            <option value="unknown" ${m.cat==='unknown'?'selected':''}>미분류</option>
+          </select>
+          <select class="status-select" onchange="setStatus(${idx}, this.value)">
+            <option value="none" ${m.status==='none'?'selected':''}>미분류</option>
+            <option value="candidate1" ${m.status==='candidate1'?'selected':''}>⭐⭐⭐</option>
+            <option value="candidate2" ${m.status==='candidate2'?'selected':''}>⭐⭐</option>
+            <option value="candidate3" ${m.status==='candidate3'?'selected':''}>⭐</option>
+            <option value="contacting" ${m.status==='contacting'?'selected':''}>컨택중</option>
+            <option value="selected" ${m.status==='selected'?'selected':''}>선정</option>
+            <option value="rejected" ${m.status==='rejected'?'selected':''}>탈락</option>
+          </select>
+          <input type="date" class="date-input" value="${m.date}" onchange="setDate(${idx}, this.value)" title="촬영 날짜">
+          <input type="time" class="time-input" value="${m.timeSlot}" onchange="setTime(${idx}, this.value)" title="촬영 시간">
+          <input type="text" class="note-input" value="${m.note}" onchange="setNote(${idx}, this.value)" placeholder="메모...">
+        </div>
+        ${m.note ? `<div class="note-display">${m.note}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function setCat(idx, val) {
+  models[idx].cat = val;
+  autoSave();
+  renderStats();
+  renderCounts();
+  renderCards();
+}
+function setGender(idx, val) {
+  models[idx].gender = val;
+  autoSave();
+  renderStats();
+  renderCounts();
+  renderCards();
+}
+function setStatus(idx, val) {
+  models[idx].status = val;
+  autoSave();
+  renderStats();
+  renderCounts();
+  renderCards();
+}
+function setDate(idx, val) {
+  models[idx].date = val;
+  autoSave();
+}
+function setTime(idx, val) {
+  models[idx].timeSlot = val;
+  autoSave();
+}
+function setNote(idx, val) {
+  models[idx].note = val;
+  autoSave();
+}
+
+// ===== 자동 저장 (localStorage) =====
+const LS_KEY = 'model_dm_state_202603';
+
+function autoSave() {
+  try {
+    const state = {};
+    models.forEach(m => {
+      state[m.id] = { s: m.status, d: m.date, t: m.timeSlot, n: m.note, c: m.cat, g: m.gender };
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  } catch(e) { /* localStorage 사용 불가 환경에서는 무시 */ }
+}
+
+function autoLoad() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    let count = 0;
+    models.forEach(m => {
+      const s = state[m.id];
+      if (s) {
+        if (s.s !== undefined) m.status = s.s === 'candidate' ? 'candidate3' : s.s;
+        if (s.d !== undefined) m.date = s.d;
+        if (s.t !== undefined) m.timeSlot = s.t;
+        if (s.n !== undefined) m.note = s.n;
+        if (s.c !== undefined) m.cat = s.c;
+        if (s.g !== undefined) m.gender = s.g;
+        count++;
+      }
+    });
+    return count > 0;
+  } catch(e) { return false; }
+}
+
+// ===== JSON 파일 저장/불러오기 (백업/이동용, 호환성 보장) =====
+const SAVE_VERSION = 2;
+
+function saveState() {
+  const state = {
+    _version: SAVE_VERSION,
+    _savedAt: new Date().toISOString(),
+    models: {}
+  };
+  models.forEach(m => {
+    state.models[m.id] = {
+      status: m.status,
+      date: m.date,
+      timeSlot: m.timeSlot,
+      note: m.note,
+      cat: m.cat,
+      gender: m.gender
+    };
+  });
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `model_state_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  alert('상태가 JSON 파일로 저장되었습니다!');
+}
+
+function loadState(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const state = JSON.parse(e.target.result);
+      let stateMap = {};
+
+      // 호환성: version 없거나 다른 구조여도 처리
+      if (state.models && typeof state.models === 'object') {
+        stateMap = state.models;
+      } else if (Array.isArray(state)) {
+        // 혹시 배열 형태면 id 기준으로 변환
+        state.forEach(s => { if (s.id) stateMap[s.id] = s; });
+      } else {
+        // 최상위가 id 맵일 수도 있음
+        Object.keys(state).forEach(k => {
+          if (k !== '_version' && k !== '_savedAt' && typeof state[k] === 'object') {
+            stateMap[k] = state[k];
+          }
+        });
+      }
+
+      let applied = 0;
+      models.forEach(m => {
+        const saved = stateMap[m.id];
+        if (saved) {
+          // 각 필드가 존재할 때만 적용 (호환성)
+          if (saved.status !== undefined) m.status = saved.status === 'candidate' ? 'candidate3' : saved.status;
+          if (saved.date !== undefined) m.date = saved.date;
+          if (saved.timeSlot !== undefined) m.timeSlot = saved.timeSlot;
+          if (saved.note !== undefined) m.note = saved.note;
+          if (saved.cat !== undefined) m.cat = saved.cat;
+          if (saved.gender !== undefined) m.gender = saved.gender;
+          applied++;
+        }
+      });
+
+      autoSave(); // JSON 불러온 결과도 localStorage에 반영
+      renderStats();
+      renderCounts();
+      renderCards();
+      alert(`불러오기 완료! ${applied}명의 모델 상태가 복원되었습니다.` +
+        (applied < models.length ? `\n(신규 ${models.length - applied}명은 기본값 유지)` : ''));
+    } catch(err) {
+      alert('JSON 파일을 읽을 수 없습니다: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// Source filter
+document.getElementById('sourceFilter').addEventListener('click', e => {
+  if (!e.target.classList.contains('source-btn')) return;
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentSource = e.target.dataset.source;
+  renderCounts();
+  renderCards();
+});
+
+// Status tabs
+document.getElementById('statusTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.status-tab');
+  if (!tab) return;
+  document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
+  tab.classList.add('active');
+  currentStatus = tab.dataset.status;
+  renderCards();
+});
+
+// Category filter
+document.getElementById('catFilter').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn');
+  if (!btn) return;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCat = btn.dataset.cat;
+  renderCards();
+});
+
+// Gender filter
+document.getElementById('genderFilter').addEventListener('click', e => {
+  const btn = e.target.closest('.gender-btn');
+  if (!btn) return;
+  document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentGender = btn.dataset.gender;
+  renderCards();
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  renderCards();
+});
+
+// Export
+function exportData() {
+  const active = models.filter(m => ['selected','contacting','candidate1','candidate2'].includes(m.status));
+  if (!active.length) { alert('후보 이상 모델이 없습니다.'); return; }
+  let text = '📋 모델 목록 (후보1~선정)\n\n';
+  active.forEach(m => {
+    const statusMap = {selected:'✅선정', contacting:'📞컨택중', candidate1:'⭐후보1', candidate2:'🔵후보2'};
+    const status = statusMap[m.status] || m.status;
+    const dateStr = m.date ? ` | 📅 ${m.date}` : '';
+    const timeStr = m.timeSlot ? ` ${m.timeSlot}` : '';
+    text += `${status} ${m.name} (@${m.handle})${dateStr}${timeStr}\n`;
+    if (m.note) text += `   메모: ${m.note}\n`;
+    text += `   ${getProfileUrl(m)}\n\n`;
+  });
+  navigator.clipboard.writeText(text).then(() => alert('클립보드에 복사되었습니다!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); alert('클립보드에 복사되었습니다!');
+  });
+}
+
+// ===== Admin 로그인 =====
+const ADMIN_HASH = 'c8347cf5ec20aa8d03fbb137697535bd0b150f14fb49bab7d006705c78631aa7';
+let isAdmin = false;
+
+async function sha256(msg) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function toggleAdmin() {
+  if (isAdmin) {
+    isAdmin = false;
+    try { sessionStorage.removeItem('admin_auth'); } catch(e){}
+    applyAdminState();
+    return;
+  }
+  const pw = prompt('관리자 비밀번호를 입력하세요:');
+  if (!pw) return;
+  const hash = await sha256(pw);
+  if (hash === ADMIN_HASH) {
+    isAdmin = true;
+    try { sessionStorage.setItem('admin_auth', '1'); } catch(e){}
+    applyAdminState();
+  } else {
+    alert('비밀번호가 틀렸습니다.');
+  }
+}
+
+function applyAdminState() {
+  const btn = document.getElementById('adminBtn');
+  const status = document.getElementById('adminStatus');
+  if (isAdmin) {
+    document.body.classList.remove('viewer-mode');
+    btn.textContent = '🔓 로그아웃';
+    btn.classList.add('logged-in');
+    status.textContent = '관리자 모드';
+    status.classList.add('on');
+  } else {
+    document.body.classList.add('viewer-mode');
+    btn.textContent = '🔒 관리자 로그인';
+    btn.classList.remove('logged-in');
+    status.textContent = '보기 전용 모드';
+    status.classList.remove('on');
+  }
+}
+
+// Init - 자동 복원 후 렌더링
+const restored = autoLoad();
+
+// 세션 유지 확인
+try { if (sessionStorage.getItem('admin_auth') === '1') isAdmin = true; } catch(e){}
+applyAdminState();
+
+renderStats();
+renderCounts();
+renderCards();
+if (restored) console.log('✅ 이전 상태가 자동 복원되었습니다.');
+</script>
+
+</body>
+</html>
