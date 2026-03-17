@@ -182,9 +182,16 @@
     .card-controls { flex-direction: column; align-items: stretch; }
     .schedule-grid { grid-template-columns: 1fr; }
   }
+  /* Firebase 동기화 상태 */
+  .sync-status { position: fixed; top: 8px; right: 8px; font-size: 0.7rem; padding: 4px 10px; border-radius: 12px; z-index: 999; font-weight: 600; }
+  .sync-status.online { background: #064e3b; color: #34d399; }
+  .sync-status.offline { background: #7f1d1d; color: #fca5a5; }
+  .sync-status.saving { background: #78350f; color: #fbbf24; }
 </style>
 </head>
 <body>
+
+<div class="sync-status online" id="syncStatus">🟢 실시간 동기화</div>
 
 <div class="admin-bar">
   <button class="admin-btn" id="adminBtn" onclick="toggleAdmin()">🔒 관리자 로그인</button>
@@ -245,6 +252,8 @@
   Instagram 22명 + Threads 46명 = 총 68명
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 const models = [
   // ===== INSTAGRAM - 나이트 포트레이트/신주쿠 =====
@@ -718,40 +727,102 @@ function setNote(idx, val) {
   autoSave();
 }
 
-// ===== 자동 저장 (localStorage) =====
-const LS_KEY = 'model_dm_state_202603';
+// ===== Firebase 실시간 동기화 =====
+const firebaseConfig = {
+  apiKey: "AIzaSyCXisHwnT9X5vzTNGzQILYWiS-PTn3Abek",
+  authDomain: "rudeo-281907.firebaseapp.com",
+  databaseURL: "https://rudeo-281907-default-rtdb.firebaseio.com",
+  projectId: "rudeo-281907",
+  storageBucket: "rudeo-281907.firebasestorage.app",
+  messagingSenderId: "1079367279629",
+  appId: "1:1079367279629:web:97a5897a49a81783842144"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const stateRef = db.ref('model_dm_state');
 
-function autoSave() {
+const LS_KEY = 'model_dm_state_202603';
+let firebaseReady = false;
+let suppressFirebaseWrite = false;
+
+function setSyncStatus(type) {
+  const el = document.getElementById('syncStatus');
+  if (type === 'online') { el.className = 'sync-status online'; el.textContent = '🟢 실시간 동기화'; }
+  else if (type === 'saving') { el.className = 'sync-status saving'; el.textContent = '💾 저장 중...'; }
+  else { el.className = 'sync-status offline'; el.textContent = '🔴 오프라인'; }
+}
+
+// localStorage 백업 (오프라인 대비)
+function localSave() {
   try {
     const state = {};
     models.forEach(m => {
       state[m.id] = { s: m.status, d: m.date, t: m.timeSlot, n: m.note, c: m.cat, g: m.gender };
     });
     localStorage.setItem(LS_KEY, JSON.stringify(state));
-  } catch(e) { /* localStorage 사용 불가 환경에서는 무시 */ }
+  } catch(e) {}
+}
+
+function autoSave() {
+  localSave();
+  if (!firebaseReady) return;
+  setSyncStatus('saving');
+  const state = {};
+  models.forEach(m => {
+    state[m.id] = { s: m.status, d: m.date, t: m.timeSlot, n: m.note, c: m.cat, g: m.gender };
+  });
+  stateRef.set(state).then(() => {
+    setSyncStatus('online');
+  }).catch(() => {
+    setSyncStatus('offline');
+  });
+}
+
+function applyState(state) {
+  if (!state) return false;
+  let count = 0;
+  models.forEach(m => {
+    const s = state[m.id];
+    if (s) {
+      if (s.s !== undefined) m.status = s.s === 'candidate' ? 'candidate3' : s.s;
+      if (s.d !== undefined) m.date = s.d;
+      if (s.t !== undefined) m.timeSlot = s.t;
+      if (s.n !== undefined) m.note = s.n;
+      if (s.c !== undefined) m.cat = s.c;
+      if (s.g !== undefined) m.gender = s.g;
+      count++;
+    }
+  });
+  return count > 0;
 }
 
 function autoLoad() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
-    const state = JSON.parse(raw);
-    let count = 0;
-    models.forEach(m => {
-      const s = state[m.id];
-      if (s) {
-        if (s.s !== undefined) m.status = s.s === 'candidate' ? 'candidate3' : s.s;
-        if (s.d !== undefined) m.date = s.d;
-        if (s.t !== undefined) m.timeSlot = s.t;
-        if (s.n !== undefined) m.note = s.n;
-        if (s.c !== undefined) m.cat = s.c;
-        if (s.g !== undefined) m.gender = s.g;
-        count++;
-      }
-    });
-    return count > 0;
+    return applyState(JSON.parse(raw));
   } catch(e) { return false; }
 }
+
+// Firebase 실시간 리스너 - 다른 기기에서 변경 시 자동 반영
+stateRef.on('value', (snapshot) => {
+  firebaseReady = true;
+  const data = snapshot.val();
+  if (!data) return;
+  if (suppressFirebaseWrite) { suppressFirebaseWrite = false; return; }
+  applyState(data);
+  localSave();
+  renderStats();
+  renderCounts();
+  renderCards();
+  setSyncStatus('online');
+  console.log('🔄 Firebase에서 데이터 동기화됨');
+});
+
+// 연결 상태 감시
+db.ref('.info/connected').on('value', (snap) => {
+  setSyncStatus(snap.val() ? 'online' : 'offline');
+});
 
 // ===== JSON 파일 저장/불러오기 (백업/이동용, 호환성 보장) =====
 const SAVE_VERSION = 2;
@@ -823,7 +894,7 @@ function loadState(event) {
         }
       });
 
-      autoSave(); // JSON 불러온 결과도 localStorage에 반영
+      autoSave(); // JSON 불러온 결과를 Firebase + localStorage에 반영
       renderStats();
       renderCounts();
       renderCards();
@@ -950,7 +1021,7 @@ function applyAdminState() {
   }
 }
 
-// Init - 자동 복원 후 렌더링
+// Init - localStorage에서 먼저 복원 (빠른 로딩), Firebase가 나중에 덮어씀
 const restored = autoLoad();
 
 // 세션 유지 확인
@@ -960,7 +1031,7 @@ applyAdminState();
 renderStats();
 renderCounts();
 renderCards();
-if (restored) console.log('✅ 이전 상태가 자동 복원되었습니다.');
+if (restored) console.log('✅ localStorage에서 상태 복원됨 (Firebase 동기화 대기 중...)');
 </script>
 
 </body>
