@@ -187,6 +187,33 @@
   .sync-status.online { background: #064e3b; color: #34d399; }
   .sync-status.offline { background: #7f1d1d; color: #fca5a5; }
   .sync-status.saving { background: #78350f; color: #fbbf24; }
+
+  /* 모델 추가 버튼 */
+  .add-model-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid #8b5cf6; background: #8b5cf6; color: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .add-model-btn:hover { background: #7c3aed; }
+  body.viewer-mode .add-model-btn { display: none; }
+
+  /* 삭제 버튼 */
+  .delete-model-btn { padding: 2px 8px; border-radius: 4px; border: 1px solid #ef4444; background: transparent; color: #f87171; cursor: pointer; font-size: 0.65rem; font-weight: 600; margin-left: auto; }
+  .delete-model-btn:hover { background: #ef4444; color: #fff; }
+  body.viewer-mode .delete-model-btn { display: none; }
+
+  /* 모달 */
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 1.1rem; margin-bottom: 16px; color: #fff; }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label { display: block; font-size: 0.75rem; color: #aaa; margin-bottom: 4px; font-weight: 600; }
+  .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: #fff; font-size: 0.85rem; outline: none; }
+  .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: #6366f1; }
+  .modal-field textarea { resize: vertical; min-height: 60px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal-actions button { padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .modal-cancel { border: 1px solid #555; background: transparent; color: #aaa; }
+  .modal-cancel:hover { background: #333; }
+  .modal-submit { border: none; background: #8b5cf6; color: #fff; }
+  .modal-submit:hover { background: #7c3aed; }
 </style>
 </head>
 <body>
@@ -243,6 +270,61 @@
   <button class="save-btn" onclick="saveState()">💾 백업 (JSON)</button>
   <button class="load-btn" onclick="document.getElementById('loadFileInput').click()">📂 백업 복원</button>
   <input type="file" id="loadFileInput" class="file-input-hidden" accept=".json" onchange="loadState(event)">
+  <button class="add-model-btn" onclick="openAddModal()">+ 모델 추가</button>
+</div>
+
+<!-- 모델 추가 모달 -->
+<div class="modal-overlay" id="addModelModal">
+  <div class="modal">
+    <h2>모델 추가</h2>
+    <div class="modal-field">
+      <label>이름 *</label>
+      <input type="text" id="newName" placeholder="모델 이름">
+    </div>
+    <div class="modal-field">
+      <label>핸들 (아이디) *</label>
+      <input type="text" id="newHandle" placeholder="@없이 입력">
+    </div>
+    <div class="modal-field">
+      <label>플랫폼</label>
+      <select id="newPlatform">
+        <option value="instagram">Instagram</option>
+        <option value="threads">Threads</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>성별</label>
+      <select id="newGender">
+        <option value="female">여성</option>
+        <option value="male">남성</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>카테고리</label>
+      <select id="newCat">
+        <option value="shinjuku">신주쿠 나이트</option>
+        <option value="kimono">기모노/벚꽃</option>
+        <option value="both">둘 다</option>
+        <option value="unknown">미분류</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>태그 (쉼표로 구분)</label>
+      <input type="text" id="newTags" placeholder="나이트 포트레이트, 신주쿠, 3/22">
+    </div>
+    <div class="modal-field">
+      <label>DM 메시지 요약</label>
+      <textarea id="newMsg" placeholder="DM 내용 요약..."></textarea>
+    </div>
+    <div class="modal-field">
+      <label>팔로워 수</label>
+      <input type="number" id="newFollowers" placeholder="숫자만 입력">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeAddModal()">취소</button>
+      <button class="modal-submit" onclick="submitAddModel()">추가</button>
+    </div>
+  </div>
 </div>
 
 <div class="cards" id="cardsContainer"></div>
@@ -255,7 +337,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-const models = [
+const defaultModels = [
   // ===== INSTAGRAM - 나이트 포트레이트/신주쿠 =====
   { id: 'ig-1', name: 'sumika / 純夏', handle: 'ssssssumika', platform: 'instagram', tab: 'primary',
     tags: [{t:'나이트 포트레이트',c:'concept'},{t:'신주쿠',c:'location'},{t:'프리 모델',c:'type'}],
@@ -350,6 +432,16 @@ const models = [
     tags: [{t:'내용 확인 불가',c:'type'}],
     msg: 'Threads 링크 공유했으나 메시지 내용 삭제됨.',
     time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== INSTAGRAM - 좋아요/반응만 =====
+  { id: 'ig-23', name: 'qurulimoonwright', handle: 'qurulimoonwright', platform: 'instagram', tab: 'primary',
+    tags: [{t:'좋아요만',c:'type'}],
+    msg: 'DM 메시지에 좋아요(하트) 반응.',
+    time: '', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+  { id: 'ig-24', name: 'Adamma', handle: '4dammaland', platform: 'instagram', tab: 'primary',
+    tags: [{t:'좋아요만',c:'type'}],
+    msg: 'DM 메시지에 좋아요(하트) 반응.',
+    time: '', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
 
   // ===== THREADS - 메시지 요청 (미수락) =====
   { id: 'th-1', name: 'aiko', handle: 'o44os_', platform: 'threads', tab: 'request',
@@ -545,9 +637,11 @@ const models = [
     time: '03/16 21:08', followers: 153, status: 'none', date: '', timeSlot: '', note: '' },
 ];
 
+let models = [];
+
 // Auto-categorize models
 function autoCategory(m) {
-  const allText = (m.tags.map(t=>t.t).join(' ') + ' ' + m.msg).toLowerCase();
+  const allText = ((m.tags||[]).map(t=>t.t).join(' ') + ' ' + (m.msg||'')).toLowerCase();
   const isShinjuku = /나이트|night|신주쿠|shinjuku|ナイト|新宿/.test(allText);
   const isKimono = /기모노|벚꽃|kimono|착물|着物|桜|cherry|きもの/.test(allText);
   if (isShinjuku && isKimono) return 'both';
@@ -558,11 +652,27 @@ function autoCategory(m) {
 
 // Auto-detect gender
 function autoGender(m) {
-  if (m.tags.some(t => t.c === 'gender-m')) return 'male';
+  if ((m.tags||[]).some(t => t.c === 'gender-m')) return 'male';
   return 'female';
 }
 
-models.forEach(m => {
+// Initialize defaults
+function initModels(list) {
+  list.forEach(m => {
+    if (!m.tags) m.tags = [];
+    if (!m.specs) m.specs = [];
+    if (!m.msg) m.msg = '';
+    if (!m.cat) m.cat = autoCategory(m);
+    if (!m.gender) m.gender = autoGender(m);
+    if (!m.status) m.status = 'none';
+    if (!m.date) m.date = '';
+    if (!m.timeSlot) m.timeSlot = '';
+    if (!m.note) m.note = '';
+  });
+  return list;
+}
+
+defaultModels.forEach(m => {
   if (!m.cat) m.cat = autoCategory(m);
   if (!m.gender) m.gender = autoGender(m);
 });
@@ -685,6 +795,7 @@ function renderCards() {
           <input type="date" class="date-input" value="${m.date}" onchange="setDate(${idx}, this.value)" title="촬영 날짜">
           <input type="time" class="time-input" value="${m.timeSlot}" onchange="setTime(${idx}, this.value)" title="촬영 시간">
           <input type="text" class="note-input" value="${m.note}" onchange="setNote(${idx}, this.value)" placeholder="메모...">
+          <button class="delete-model-btn" onclick="deleteModel(${idx})" title="모델 삭제">✕ 삭제</button>
         </div>
         ${m.note ? `<div class="note-display">${m.note}</div>` : ''}
       </div>
@@ -739,11 +850,11 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const stateRef = db.ref('model_dm_state');
+const modelsRef = db.ref('model_dm_models_v2');
 
-const LS_KEY = 'model_dm_state_202603';
+const LS_KEY = 'model_dm_fulldata_v2';
 let firebaseReady = false;
-let suppressFirebaseWrite = false;
+let suppressFirebaseSync = false;
 
 function setSyncStatus(type) {
   const el = document.getElementById('syncStatus');
@@ -752,71 +863,85 @@ function setSyncStatus(type) {
   else { el.className = 'sync-status offline'; el.textContent = '🔴 오프라인'; }
 }
 
-// localStorage 백업 (오프라인 대비)
+// 모델 데이터를 Firebase용 plain object로 변환
+function modelsToFirebase(list) {
+  const data = {};
+  list.forEach(m => {
+    data[m.id] = {
+      name: m.name || '', handle: m.handle || '', platform: m.platform || 'instagram',
+      tab: m.tab || 'primary', tags: m.tags || [], specs: m.specs || [],
+      msg: m.msg || '', time: m.time || '', followers: m.followers || null,
+      verified: m.verified || false, status: m.status || 'none',
+      date: m.date || '', timeSlot: m.timeSlot || '', note: m.note || '',
+      cat: m.cat || 'unknown', gender: m.gender || 'female'
+    };
+  });
+  return data;
+}
+
+// Firebase 데이터를 models 배열로 변환
+function firebaseToModels(data) {
+  if (!data) return [];
+  return Object.keys(data).map(id => {
+    const d = data[id];
+    return {
+      id, name: d.name || '', handle: d.handle || '', platform: d.platform || 'instagram',
+      tab: d.tab || 'primary', tags: d.tags || [], specs: d.specs || [],
+      msg: d.msg || '', time: d.time || '', followers: d.followers || null,
+      verified: d.verified || false, status: d.status || 'none',
+      date: d.date || '', timeSlot: d.timeSlot || '', note: d.note || '',
+      cat: d.cat || 'unknown', gender: d.gender || 'female'
+    };
+  });
+}
+
+// localStorage 백업 (오프라인 대비 - 전체 데이터)
 function localSave() {
   try {
-    const state = {};
-    models.forEach(m => {
-      state[m.id] = { s: m.status, d: m.date, t: m.timeSlot, n: m.note, c: m.cat, g: m.gender };
-    });
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    localStorage.setItem(LS_KEY, JSON.stringify(modelsToFirebase(models)));
   } catch(e) {}
 }
 
+function localLoad() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
+// Firebase에 전체 모델 데이터 저장
 function autoSave() {
   localSave();
   if (!firebaseReady) return;
   setSyncStatus('saving');
-  const state = {};
-  models.forEach(m => {
-    state[m.id] = { s: m.status, d: m.date, t: m.timeSlot, n: m.note, c: m.cat, g: m.gender };
-  });
-  stateRef.set(state).then(() => {
+  suppressFirebaseSync = true;
+  modelsRef.set(modelsToFirebase(models)).then(() => {
     setSyncStatus('online');
   }).catch(() => {
     setSyncStatus('offline');
   });
 }
 
-function applyState(state) {
-  if (!state) return false;
-  let count = 0;
-  models.forEach(m => {
-    const s = state[m.id];
-    if (s) {
-      if (s.s !== undefined) m.status = s.s === 'candidate' ? 'candidate3' : s.s;
-      if (s.d !== undefined) m.date = s.d;
-      if (s.t !== undefined) m.timeSlot = s.t;
-      if (s.n !== undefined) m.note = s.n;
-      if (s.c !== undefined) m.cat = s.c;
-      if (s.g !== undefined) m.gender = s.g;
-      count++;
-    }
-  });
-  return count > 0;
-}
-
-function autoLoad() {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return false;
-    return applyState(JSON.parse(raw));
-  } catch(e) { return false; }
-}
-
-// Firebase 실시간 리스너 - 다른 기기에서 변경 시 자동 반영
-stateRef.on('value', (snapshot) => {
+// Firebase 실시간 리스너 - 다른 기기에서 변경 시 자동 반영 (모델 추가/삭제 포함)
+modelsRef.on('value', (snapshot) => {
   firebaseReady = true;
   const data = snapshot.val();
-  if (!data) return;
-  if (suppressFirebaseWrite) { suppressFirebaseWrite = false; return; }
-  applyState(data);
+  if (!data) {
+    // Firebase 비어있음 → defaultModels로 시드
+    console.log('🌱 Firebase 비어있음, 기본 데이터 시드 중...');
+    models = initModels([...defaultModels.map(m => ({...m}))]);
+    modelsRef.set(modelsToFirebase(models));
+    localSave();
+    refreshUI();
+    return;
+  }
+  if (suppressFirebaseSync) { suppressFirebaseSync = false; return; }
+  models = initModels(firebaseToModels(data));
   localSave();
-  renderStats();
-  renderCounts();
-  renderCards();
+  refreshUI();
   setSyncStatus('online');
-  console.log('🔄 Firebase에서 데이터 동기화됨');
+  console.log('🔄 Firebase에서 전체 데이터 동기화됨 (' + models.length + '명)');
 });
 
 // 연결 상태 감시
@@ -824,35 +949,100 @@ db.ref('.info/connected').on('value', (snap) => {
   setSyncStatus(snap.val() ? 'online' : 'offline');
 });
 
-// ===== JSON 파일 저장/불러오기 (백업/이동용, 호환성 보장) =====
-const SAVE_VERSION = 2;
+function refreshUI() {
+  renderStats();
+  renderCounts();
+  renderCards();
+  updateFooter();
+}
+
+function updateFooter() {
+  const ig = models.filter(m => m.platform === 'instagram').length;
+  const th = models.filter(m => m.platform === 'threads').length;
+  const footer = document.querySelector('.footer');
+  if (footer) footer.innerHTML = `walk.and.look Model DM Manager<br>Instagram ${ig}명 + Threads ${th}명 = 총 ${models.length}명`;
+}
+
+// ===== 모델 추가/삭제 =====
+function openAddModal() {
+  document.getElementById('addModelModal').classList.add('show');
+}
+function closeAddModal() {
+  document.getElementById('addModelModal').classList.remove('show');
+  ['newName','newHandle','newTags','newMsg','newFollowers'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('newPlatform').value = 'instagram';
+  document.getElementById('newGender').value = 'female';
+  document.getElementById('newCat').value = 'unknown';
+}
+
+function submitAddModel() {
+  const name = document.getElementById('newName').value.trim();
+  const handle = document.getElementById('newHandle').value.trim().replace('@','');
+  if (!name || !handle) { alert('이름과 핸들은 필수입니다.'); return; }
+  // 중복 체크
+  if (models.some(m => m.handle === handle)) { alert('이미 존재하는 핸들입니다: @' + handle); return; }
+
+  const platform = document.getElementById('newPlatform').value;
+  const gender = document.getElementById('newGender').value;
+  const cat = document.getElementById('newCat').value;
+  const tagsRaw = document.getElementById('newTags').value.trim();
+  const msg = document.getElementById('newMsg').value.trim();
+  const followers = parseInt(document.getElementById('newFollowers').value) || null;
+
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => ({t: t.trim(), c: 'concept'})) : [];
+
+  // 새 ID 생성
+  const prefix = platform === 'instagram' ? 'ig' : 'th';
+  const existingNums = models.filter(m => m.id.startsWith(prefix + '-')).map(m => parseInt(m.id.split('-')[1]) || 0);
+  const newNum = Math.max(0, ...existingNums) + 1;
+  const newId = prefix + '-' + newNum;
+
+  const newModel = {
+    id: newId, name, handle, platform, tab: 'primary',
+    tags, specs: [], msg: msg || '', time: new Date().toLocaleDateString('ko-KR', {month:'2-digit', day:'2-digit'}).replace('.','/',1).replace('.',''),
+    followers, verified: false, status: 'none', date: '', timeSlot: '', note: '',
+    cat, gender
+  };
+
+  models.push(newModel);
+  autoSave();
+  refreshUI();
+  closeAddModal();
+  // 새 카드로 스크롤
+  setTimeout(() => {
+    const card = document.getElementById('card-' + (models.length-1));
+    if (card) card.scrollIntoView({behavior: 'smooth', block: 'center'});
+  }, 100);
+}
+
+function deleteModel(idx) {
+  const m = models[idx];
+  if (!confirm(`"${m.name} (@${m.handle})"을(를) 삭제하시겠습니까?\n\n이 작업은 모든 기기에서 반영됩니다.`)) return;
+  models.splice(idx, 1);
+  autoSave();
+  refreshUI();
+}
+
+// ===== JSON 파일 저장/불러오기 (백업/이동용 - 전체 데이터) =====
+const SAVE_VERSION = 3;
 
 function saveState() {
   const state = {
     _version: SAVE_VERSION,
     _savedAt: new Date().toISOString(),
-    models: {}
+    _count: models.length,
+    models: modelsToFirebase(models)
   };
-  models.forEach(m => {
-    state.models[m.id] = {
-      status: m.status,
-      date: m.date,
-      timeSlot: m.timeSlot,
-      note: m.note,
-      cat: m.cat,
-      gender: m.gender
-    };
-  });
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `model_state_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `model_backup_${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  alert('상태가 JSON 파일로 저장되었습니다!');
+  alert('전체 모델 데이터가 JSON 파일로 저장되었습니다! (' + models.length + '명)');
 }
 
 function loadState(event) {
@@ -862,44 +1052,48 @@ function loadState(event) {
   reader.onload = function(e) {
     try {
       const state = JSON.parse(e.target.result);
-      let stateMap = {};
+      let dataMap = {};
 
-      // 호환성: version 없거나 다른 구조여도 처리
-      if (state.models && typeof state.models === 'object') {
-        stateMap = state.models;
-      } else if (Array.isArray(state)) {
-        // 혹시 배열 형태면 id 기준으로 변환
-        state.forEach(s => { if (s.id) stateMap[s.id] = s; });
+      // v3: 전체 모델 데이터
+      if (state._version >= 3 && state.models) {
+        dataMap = state.models;
+      }
+      // v2 호환: 상태만 있는 경우 → 기존 모델에 상태 적용
+      else if (state.models && typeof state.models === 'object') {
+        // 상태만 있는 v2 파일
+        models.forEach(m => {
+          const saved = state.models[m.id];
+          if (saved) {
+            if (saved.status !== undefined) m.status = saved.status === 'candidate' ? 'candidate3' : saved.status;
+            if (saved.date !== undefined) m.date = saved.date;
+            if (saved.timeSlot !== undefined) m.timeSlot = saved.timeSlot;
+            if (saved.note !== undefined) m.note = saved.note;
+            if (saved.cat !== undefined) m.cat = saved.cat;
+            if (saved.gender !== undefined) m.gender = saved.gender;
+          }
+        });
+        autoSave();
+        refreshUI();
+        alert('v2 백업에서 상태 복원 완료!');
+        event.target.value = '';
+        return;
       } else {
-        // 최상위가 id 맵일 수도 있음
+        // 기타 형식
         Object.keys(state).forEach(k => {
-          if (k !== '_version' && k !== '_savedAt' && typeof state[k] === 'object') {
-            stateMap[k] = state[k];
+          if (k !== '_version' && k !== '_savedAt' && k !== '_count' && typeof state[k] === 'object') {
+            dataMap[k] = state[k];
           }
         });
       }
 
-      let applied = 0;
-      models.forEach(m => {
-        const saved = stateMap[m.id];
-        if (saved) {
-          // 각 필드가 존재할 때만 적용 (호환성)
-          if (saved.status !== undefined) m.status = saved.status === 'candidate' ? 'candidate3' : saved.status;
-          if (saved.date !== undefined) m.date = saved.date;
-          if (saved.timeSlot !== undefined) m.timeSlot = saved.timeSlot;
-          if (saved.note !== undefined) m.note = saved.note;
-          if (saved.cat !== undefined) m.cat = saved.cat;
-          if (saved.gender !== undefined) m.gender = saved.gender;
-          applied++;
-        }
-      });
-
-      autoSave(); // JSON 불러온 결과를 Firebase + localStorage에 반영
-      renderStats();
-      renderCounts();
-      renderCards();
-      alert(`불러오기 완료! ${applied}명의 모델 상태가 복원되었습니다.` +
-        (applied < models.length ? `\n(신규 ${models.length - applied}명은 기본값 유지)` : ''));
+      if (Object.keys(dataMap).length > 0) {
+        models = initModels(firebaseToModels(dataMap));
+        autoSave();
+        refreshUI();
+        alert(`불러오기 완료! ${models.length}명의 모델 데이터가 복원되었습니다.`);
+      } else {
+        alert('복원할 데이터가 없습니다.');
+      }
     } catch(err) {
       alert('JSON 파일을 읽을 수 없습니다: ' + err.message);
     }
@@ -1022,16 +1216,21 @@ function applyAdminState() {
 }
 
 // Init - localStorage에서 먼저 복원 (빠른 로딩), Firebase가 나중에 덮어씀
-const restored = autoLoad();
+const localData = localLoad();
+if (localData && Object.keys(localData).length > 0) {
+  models = initModels(firebaseToModels(localData));
+  console.log('✅ localStorage에서 ' + models.length + '명 복원 (Firebase 동기화 대기 중...)');
+} else {
+  // localStorage에도 없으면 default로 시작
+  models = initModels([...defaultModels.map(m => ({...m, tags: [...(m.tags||[])], specs: [...(m.specs||[])]}))]);
+  console.log('📋 기본 데이터로 시작 (' + models.length + '명)');
+}
 
 // 세션 유지 확인
 try { if (sessionStorage.getItem('admin_auth') === '1') isAdmin = true; } catch(e){}
 applyAdminState();
 
-renderStats();
-renderCounts();
-renderCards();
-if (restored) console.log('✅ localStorage에서 상태 복원됨 (Firebase 동기화 대기 중...)');
+refreshUI();
 </script>
 
 </body>
