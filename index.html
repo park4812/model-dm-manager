@@ -152,6 +152,8 @@
   .cat-btn[data-cat="kimono"].active .cat-count { background: #ec4899; color: #fff; }
   .cat-btn[data-cat="both"].active { border-color: #8b5cf6; color: #c084fc; }
   .cat-btn[data-cat="both"].active .cat-count { background: #8b5cf6; color: #fff; }
+  .cat-btn[data-cat="street"].active { border-color: #14b8a6; color: #2dd4bf; }
+  .cat-btn[data-cat="street"].active .cat-count { background: #14b8a6; color: #fff; }
   .cat-btn[data-cat="unknown"].active { border-color: #6b7280; color: #9ca3af; }
   .cat-btn[data-cat="unknown"].active .cat-count { background: #6b7280; color: #fff; }
   .cat-select { padding: 4px 8px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #ccc; font-size: 0.7rem; cursor: pointer; outline: none; margin-left: 4px; }
@@ -160,6 +162,7 @@
   .cat-badge-shinjuku { background: #422006; color: #fbbf24; }
   .cat-badge-kimono { background: #4a0d2e; color: #f472b6; }
   .cat-badge-both { background: #2e1065; color: #c084fc; }
+  .cat-badge-street { background: #042f2e; color: #2dd4bf; }
   .cat-badge-unknown { background: #1f2937; color: #9ca3af; }
 
   /* Admin 로그인 */
@@ -252,6 +255,7 @@
   <button class="cat-btn" data-cat="shinjuku">신주쿠 나이트 <span class="cat-count" id="catcount-shinjuku">0</span></button>
   <button class="cat-btn" data-cat="kimono">기모노/벚꽃 <span class="cat-count" id="catcount-kimono">0</span></button>
   <button class="cat-btn" data-cat="both">둘 다 <span class="cat-count" id="catcount-both">0</span></button>
+  <button class="cat-btn" data-cat="street">거리스냅 <span class="cat-count" id="catcount-street">0</span></button>
   <button class="cat-btn" data-cat="unknown">미분류 <span class="cat-count" id="catcount-unknown">0</span></button>
 </div>
 
@@ -305,6 +309,7 @@
         <option value="shinjuku">신주쿠 나이트</option>
         <option value="kimono">기모노/벚꽃</option>
         <option value="both">둘 다</option>
+        <option value="street">거리스냅</option>
         <option value="unknown">미분류</option>
       </select>
     </div>
@@ -432,6 +437,65 @@ const defaultModels = [
     tags: [{t:'내용 확인 불가',c:'type'}],
     msg: 'Threads 링크 공유했으나 메시지 내용 삭제됨.',
     time: '03/16', followers: null, status: 'none', date: '', timeSlot: '', note: '' },
+
+  // ===== INSTAGRAM - 거리스냅 (03/18 신규) =====
+  { id: 'ig-25', name: '片山美澄', handle: 'katayama_mika27', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'3/26 오전',c:'date'}],
+    msg: 'Threads 모집글 보고 DM. 26일 오전 촬영 가능하면 관심 있음.',
+    time: '03/18 20:45', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-26', name: '加神こはく', handle: '_kohaku589', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'포트레이트 모델',c:'type'},{t:'유료 확인',c:'paid'}],
+    msg: '포트레이트 모델 활동 중. 유료 촬영(모델에게 지급)인지 확인 질문.',
+    time: '03/18 20:42', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-27', name: 'かれん', handle: 'town_belle', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'포트레이트 모델',c:'type'}],
+    msg: '모집글 보고 지원. 귀여운/멋진 스타일 모두 가능. 희망에 맞춤.',
+    time: '03/18 19:53', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-28', name: '雑魚nanase', handle: 'wjdjd_idjsksnsvdhks', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'포트레이트 모델',c:'type'}],
+    msg: '포트레이트 모델 모집 보고 지원. 참고용 포트레이트 사진 전송.',
+    time: '03/18 19:48', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-29', name: 'せりな', handle: 'serina.x.eve09', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'3/23, 3/26',c:'date'}],
+    msg: '촬영 희망. 23일, 26일 가능.',
+    time: '03/18 18:31', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-30', name: '中侯カホ / 上京girl', handle: 'kaho_nakamata', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'3월말',c:'date'}],
+    msg: '3월말 포트레이트 촬영 관심.',
+    time: '03/18 18:30', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-31', name: 'きの', handle: 'kinokino_world_photo', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'3/27',c:'date'},{t:'마치다역',c:'location'}],
+    msg: 'Threads 모집글 보고 연락. 27일 도쿄 마치다역에서 촬영 희망.',
+    time: '03/18 18:28', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-32', name: 'しんげやいっき', handle: '172cm58kgram', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'남성',c:'gender-m'}],
+    specs: [{k:'키',v:'172cm'},{k:'체중',v:'58kg'}],
+    msg: 'Threads 피사체 모집 보고 연락. 여성 한정인지 질문, 남성도 가능하면 지원 희망. 촬영장소 제안도 가능.',
+    time: '03/18 18:09', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street', gender: 'male' },
+  { id: 'ig-33', name: '_y_grm_', handle: '_y_grm_', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'}],
+    msg: 'Threads 피사체 모집 보고 연락. 도움이 되고 싶다고 지원.',
+    time: '03/18 17:50', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-34', name: 'Maho', handle: 'mahomemotion', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'}],
+    msg: 'Threads 피사체 모집에 관심. 이미지가 맞으면 함께하고 싶다고 지원.',
+    time: '03/18 17:39', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-35', name: 'Tina Yang', handle: 'sundayswithtina_', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'3/23, 3/24, 3/26',c:'date'},{t:'도쿄 거주',c:'location'}],
+    msg: '도쿄 거주. 모델 관심. 3/23, 24, 26일 가능. (영어)',
+    time: '03/18 17:26', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-36', name: 'katie / K.T', handle: 'shihxx', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'대만 출신',c:'type'},{t:'Elite 모델',c:'type'}],
+    msg: '대만 출신 모델 K.T. Elite 에이전시 소속. 일본어 공부 중, 중국어/영어 커뮤니케이션 가능. 포트폴리오 전송.',
+    time: '03/18 17:23', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-37', name: 'Pimnara Dhammatong', handle: 'nitan_pnr', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'도쿄',c:'location'}],
+    msg: '모집글 보고 관심. 도쿄 포트레이트 촬영 참가 희망.',
+    time: '03/18 17:19', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
+  { id: 'ig-38', name: 'LillyElly', handle: 'mikimurphy1', platform: 'instagram', tab: 'primary',
+    tags: [{t:'거리스냅',c:'concept'},{t:'3/26 오전',c:'date'},{t:'호주/일본 하프',c:'type'}],
+    msg: '호주와 일본의 하프 자매. 26일 오전 가능.',
+    time: '03/18 16:07', followers: null, status: 'none', date: '', timeSlot: '', note: '', cat: 'street' },
 
   // ===== INSTAGRAM - 좋아요/반응만 =====
   { id: 'ig-23', name: 'qurulimoonwright', handle: 'qurulimoonwright', platform: 'instagram', tab: 'primary',
@@ -644,6 +708,8 @@ function autoCategory(m) {
   const allText = ((m.tags||[]).map(t=>t.t).join(' ') + ' ' + (m.msg||'')).toLowerCase();
   const isShinjuku = /나이트|night|신주쿠|shinjuku|ナイト|新宿/.test(allText);
   const isKimono = /기모노|벚꽃|kimono|착물|着物|桜|cherry|きもの/.test(allText);
+  const isStreet = /거리스냅|street snap|스트리트/.test(allText);
+  if (isStreet) return 'street';
   if (isShinjuku && isKimono) return 'both';
   if (isShinjuku) return 'shinjuku';
   if (isKimono) return 'kimono';
@@ -711,7 +777,7 @@ function renderCounts() {
   });
   // Category counts
   document.getElementById('catcount-all').textContent = filtered.length;
-  ['shinjuku','kimono','both','unknown'].forEach(c => {
+  ['shinjuku','kimono','both','street','unknown'].forEach(c => {
     document.getElementById('catcount-' + c).textContent = filtered.filter(m => m.cat === c).length;
   });
   // Gender counts
@@ -764,7 +830,7 @@ function renderCards() {
       <div class="card-right">
         <div class="card-top">
           <div>
-            <div class="card-name">${m.name}${m.verified ? ' <span style="color:#3b82f6;font-size:0.75rem;">✓</span>' : ''}<span class="gender-badge gender-badge-${m.gender}">${m.gender==='male'?'♂ 남성':'♀ 여성'}</span>${m.cat !== 'unknown' ? `<span class="cat-badge cat-badge-${m.cat}">${{shinjuku:'신주쿠',kimono:'기모노',both:'둘다'}[m.cat]}</span>` : '<span class="cat-badge cat-badge-unknown">미분류</span>'}</div>
+            <div class="card-name">${m.name}${m.verified ? ' <span style="color:#3b82f6;font-size:0.75rem;">✓</span>' : ''}<span class="gender-badge gender-badge-${m.gender}">${m.gender==='male'?'♂ 남성':'♀ 여성'}</span>${m.cat !== 'unknown' ? `<span class="cat-badge cat-badge-${m.cat}">${{shinjuku:'신주쿠',kimono:'기모노',both:'둘다',street:'거리스냅'}[m.cat]}</span>` : '<span class="cat-badge cat-badge-unknown">미분류</span>'}</div>
             <div class="card-handle"><a href="${profileUrl}" target="_blank">@${m.handle}</a></div>
           </div>
           <div class="card-time">${m.time}</div>
@@ -781,6 +847,7 @@ function renderCards() {
             <option value="shinjuku" ${m.cat==='shinjuku'?'selected':''}>신주쿠</option>
             <option value="kimono" ${m.cat==='kimono'?'selected':''}>기모노</option>
             <option value="both" ${m.cat==='both'?'selected':''}>둘 다</option>
+            <option value="street" ${m.cat==='street'?'selected':''}>거리스냅</option>
             <option value="unknown" ${m.cat==='unknown'?'selected':''}>미분류</option>
           </select>
           <select class="status-select" onchange="setStatus(${idx}, this.value)">
